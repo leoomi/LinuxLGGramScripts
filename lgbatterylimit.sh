@@ -21,17 +21,31 @@ function driver_path_check() {
 
 driver_path_check
 
-if [ ! -f $DRIVER ]; then
-  echo "LG driver file not found"
-  exit -1
+ACPI_PATH="\_SB.PCI0.LPCB.H_EC"
+
+if [ ! -f "$DRIVER" ]; then
+  if [ -e /proc/acpi/call ]; then
+    echo "LG driver file not found. Falling back to acpi_call."
+    USE_ACPI_CALL=1
+  else
+    echo "LG driver file not found and acpi_call is not installed"
+    exit -1
+  fi
 fi
 
 TURN_ON=1
 if [ $# -eq 0 ]; then
-  PREV_VAL=`cat $DRIVER`
-
-  if [[ $PREV_VAL == 80 ]]; then
-    TURN_ON=0
+  if [ "$USE_ACPI_CALL" == 1 ]; then
+    PREV_HEX=$(echo "$ACPI_PATH.ECRX 0xBC" | sudo tee /proc/acpi/call > /dev/null && sudo cat /proc/acpi/call)
+    # 0x50 is 80, 0x64 is 100
+    if [[ "$PREV_HEX" == "0x50" ]]; then
+      TURN_ON=0
+    fi
+  else
+    PREV_VAL=`cat $DRIVER`
+    if [[ $PREV_VAL == 80 ]]; then
+      TURN_ON=0
+    fi
   fi
 else
   if [ "$1" == "off" ]; then
@@ -41,8 +55,16 @@ fi
 
 if [[ $TURN_ON == 1 ]]; then
   echo "Changing battery limit to 80%"
-  sudo bash -c "echo 80 > $DRIVER"
+  if [ "$USE_ACPI_CALL" == 1 ]; then
+    echo "$ACPI_PATH.ECWX 0xBC 0x50" | sudo tee /proc/acpi/call > /dev/null
+  else
+    sudo bash -c "echo 80 > $DRIVER"
+  fi
 else
   echo "Changing battery limit to 100%"
-  sudo bash -c "echo 100 > $DRIVER"
+  if [ "$USE_ACPI_CALL" == 1 ]; then
+    echo "$ACPI_PATH.ECWX 0xBC 0x64" | sudo tee /proc/acpi/call > /dev/null
+  else
+    sudo bash -c "echo 100 > $DRIVER"
+  fi
 fi
