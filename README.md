@@ -1,3 +1,4 @@
+This repository is archived as I don't have an LG gram anymore.
 # Linux LG Gram Scripts
 A set of scripts to facilitate the usage of Linux drivers for LG Gram laptops. The driver might be available on kernels 4.20 and above.
 This has only been tested on the 15Z980 model and likely works with other Z980 models as well. 14Z90 reportedly did not work with Ubuntu 20.04.
